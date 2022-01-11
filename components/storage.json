@@ -1,0 +1,77 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "storageAccountName": {
+            "type": "string",
+            "maxLength": 15
+        },
+        "location": {
+            "type": "string"
+        },
+        "storageSku": {
+            "type": "string",
+            "allowedValues": [
+                "Premium_LRS",
+                "Premium_ZRS",
+                "Standard_LRS",
+                "Standard_ZRS",
+                "Standard_GRS"
+            ]
+        },
+        "deployIdentity": {
+            "type": "bool",
+            "defaultValue": false
+        },
+        "largeFileShare": {
+            "type": "string",
+            "allowedValues": [
+                "Disabled",
+                "Enabled"
+            ]
+        },
+        "tags": {
+            "type": "object",
+            "defaultValue": {}
+        }
+    },
+    "variables": {
+        "identityType": "[if(parameters('deployIdentity'),'SystemAssigned','None')]"
+    },
+    "resources": [
+        {
+            "name": "[parameters('storageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-04-01",
+            "tags": "[parameters('tags')]",
+            "location": "[parameters('location')]",
+            "kind": "StorageV2",
+            "sku": {
+                "name": "[parameters('storageSku')]"
+            },
+            "identity": {
+                "type": "[variables('identityType')]"
+            },
+            "properties": {
+                "allowBlobPublicAccess": false,
+                "allowCrossTenantReplication": false,
+                "allowSharedKeyAccess": false,
+                "azureFilesIdentityBasedAuthentication": {
+                    "activeDirectoryProperties": {
+                        "azureStorageSid": "",
+                        "domainGuid": "",
+                        "domainName": "",
+                        "domainSid": "",
+                        "forestName": "",
+                        "netBiosDomainName": ""
+                    },
+                    "directoryServiceOptions": "AD"
+                },
+                "largeFileSharesState": "[parameters('largeFileShare')]",
+                "minimumTlsVersion": "TLS1_2",
+                "supportsHttpsTrafficOnly": true
+            }
+        }
+    ],
+    "outputs": {}
+}

@@ -1,0 +1,144 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vmName": {
+            "type": "string",
+            "maxLength": 15
+        },
+        "vnetName": {
+            "type": "string"
+        },
+        "subnetName": {
+            "type": "string"
+        },
+        "location": {
+            "type": "string"
+        },
+        "ADAdminUser": {
+            "type": "string"
+        },
+        "ADAdminPassword": {
+            "type": "securestring"
+        },
+        "tags": {
+            "type": "object",
+            "defaultValue": {}
+        }
+    },
+    "variables": {
+        "nicName": "[concat(parameters('vmName'),'-nic')]",
+        "subnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets',parameters('vnetName'),parameters('subnetName'))]",
+        "vmSize": "Standard_D4s_v3",
+        "imageRef": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2019-Datacenter-Core-smalldisk",
+            "version": "latest"
+        },
+        "osDiskName": "[concat(parameters('vmName'),'-osdisk')]",
+        "dscExtensionName": "[concat(parameters('vmName'),'/dscExtension')]",
+        "availSetName": "[concat(parameters('vmName'),'-avset')]"
+    },
+    "resources": [
+        {
+            "name": "[variables('availSetName')]",
+            "type": "Microsoft.Compute/availabilitySets",
+            "apiVersion": "2021-03-01",
+            "location": "[parameters('location')]",
+            "tags": "[parameters('tags')]",
+            "properties": {}
+        },
+        {
+            "name": "[variables('nicName')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2020-11-01",
+            "location": "[parameters('location')]",
+            "dependsOn": [],
+            "tags": "[parameters('tags')]",
+            "properties": {
+                "enableAcceleratedNetworking": true,
+                "ipConfigurations": [
+                    {
+                        "name": "ipConfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[variables('subnetResourceId')]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[parameters('vmName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2021-03-01",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[variables('nicName')]",
+                "[variables('availSetName')]"
+            ],
+            "tags": "[parameters('tags')]",
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[variables('vmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('vmName')]",
+                    "adminUsername": "[parameters('ADAdminUser')]",
+                    "adminPassword": "[parameters('ADAdminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": "[variables('imageRef')]",
+                    "osDisk": {
+                        "name": "[variables('osDiskName')]",
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true
+                    }
+                }
+            }
+        },
+        {
+            "name": "[variables('dscExtensionName')]",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "apiVersion": "2021-03-01",
+            "location": "[parameters('location')]",
+            "tags": "[parameters('tags')]",
+            "dependsOn": [
+                "[parameters('vmName')]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.Powershell",
+                "type": "DSC",
+                "typeHandlerVersion": "2.9",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "modulesUrl": "[concat('artifactsLocation', '/DSCModules/dsc.zip')]",
+                    "sasToken": "artifactsLocationSasToken",
+                    "configurationFunction": "Configure"
+                },
+                "protectedSettings": {}
+            }
+        }
+    ],
+    "outputs": {
+        "privateIpAllocated": {
+            "type": "string",
+            "value": "[reference(variables('nicName')).ipConfigurations[0].properties.privateIpAllocated]"
+        }
+    }
+}
