@@ -1,0 +1,78 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vnetName": {
+            "type": "string"
+        },
+        "vnetAddressRanges": {
+            "type": "array",
+            "metadata": {
+                "Description": "The address ranges of the new VNET in CIDR format"
+            }
+        },
+        "vnetSubnets": {
+            "type": "array",
+            "metadata": {
+                "Description": "Subnets already created"
+            }
+        },
+        "location": {
+            "type": "string"
+        },
+        "nicName": {
+            "type": "string"
+        },
+        "subnetRef": {
+            "type": "string"
+        },
+        "privateIp": {
+            "type": "string"
+        }
+    },
+    "variables": {
+        "dnsServers": [
+            "[parameters('privateIp')]",
+            "168.63.129.16"
+        ]
+    },
+    "resources": [
+        {
+            "name": "[parameters('vnetName')]",
+            "type": "Microsoft.Network/virtualNetworks",
+            "location": "[parameters('location')]",
+            "apiVersion": "2020-11-01",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": "[parameters('vnetAddressRanges')]"
+                },
+                "subnets": "[parameters('vnetSubnets')]",
+                "dhcpOptions": {
+                    "dnsServers": "[variables('dnsServers')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[parameters('nicName')]",
+            "apiVersion": "2020-05-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "enableAcceleratedNetworking": true,
+                "ipConfigurations": [
+                    {
+                        "name": "ipConfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Static",
+                            "privateIPAddress": "[parameters('privateIp')]",
+                            "subnet": {
+                                "id": "[parameters('subnetRef')]"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {}
+}

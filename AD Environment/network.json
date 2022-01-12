@@ -2,7 +2,7 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "virtualNetworkName": {
+        "vnetName": {
             "type": "string"
         },
         "location": {
@@ -16,7 +16,7 @@
     "variables": {},
     "resources": [
         {
-            "name": "[parameters('virtualNetworkName')]",
+            "name": "[parameters('vnetName')]",
             "type": "Microsoft.Network/virtualNetworks",
             "apiVersion": "2020-11-01",
             "location": "[parameters('location')]",
@@ -74,5 +74,14 @@
             }
         }
     ],
-    "outputs": {}
+    "outputs": {
+        "vnetAddressRanges": {
+            "type": "array",
+            "value": "[reference(parameters('vnetName')).addressSpace.addressPrefixes]"
+        },
+        "vnetSubnets": {
+            "type": "array",
+            "value": "[reference(parameters('vnetName')).subnets]"
+        }
+    }
 }
